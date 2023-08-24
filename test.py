@@ -13,23 +13,29 @@ from utils import *
 
 warnings.filterwarnings('ignore')
 
-opt = Config('config.yml')
 
-seed_everything(opt.OPTIM.SEED)
 
 
 def test():
+    opt = Config('config.yml')
+    seed_everything(opt.OPTIM.SEED)
+
     accelerator = Accelerator()
+    device = accelerator.device
 
     # Data Loader
     val_dir = opt.TRAINING.VAL_DIR
 
-    val_dataset = get_data(val_dir, opt.MODEL.INPUT, opt.MODEL.TARGET, 'eval', {'w': opt.TRAINING.PS_W, 'h': opt.TRAINING.PS_H, 'ori': False})
+    val_dataset = get_data(val_dir, opt.MODEL.INPUT, opt.MODEL.TARGET, 'test', opt.TRAINING.ORI,
+                           {'w': opt.TRAINING.PS_W, 'h': opt.TRAINING.PS_H})
     testloader = DataLoader(dataset=val_dataset, batch_size=1, shuffle=False, num_workers=8, drop_last=False,
                             pin_memory=True)
 
     # Model & Metrics
     model = Model()
+
+    import lpips
+    criterion_lpips = lpips.LPIPS(net='alex').to(device)
 
     load_checkpoint(model, opt.TESTING.WEIGHT)
 
@@ -40,7 +46,7 @@ def test():
     size = len(testloader)
     stat_psnr = 0
     stat_ssim = 0
-    stat_rmse = 0
+    stat_lpips = 0
     for _, test_data in enumerate(tqdm(testloader)):
         # get the inputs; data is a list of [targets, inputs, filename]
         inp = test_data[0].contiguous()
@@ -51,15 +57,15 @@ def test():
 
         save_image(res, os.path.join("result", test_data[2][0]))
 
-        stat_psnr += peak_signal_noise_ratio(res, tar, data_range=1)
-        stat_ssim += structural_similarity_index_measure(res, tar, data_range=1)
-        stat_rmse += mean_squared_error(torch.mul(res, 255), torch.mul(tar, 255), squared=False)
+        stat_psnr += peak_signal_noise_ratio(res, tar, data_range=1).item()
+        stat_ssim += structural_similarity_index_measure(res, tar, data_range=1).item()
+        stat_lpips += criterion_lpips(res, tar).item()
 
     stat_psnr /= size
     stat_ssim /= size
-    stat_rmse /= size
+    stat_lpips /= size
 
-    print("PSNR: {}, SSIM: {}, RMSE: {}".format(stat_psnr, stat_ssim, stat_rmse))
+    print("PSNR: {}, SSIM: {}, LPIPS: {}".format(stat_psnr, stat_ssim, stat_lpips))
 
 
 if __name__ == '__main__':
