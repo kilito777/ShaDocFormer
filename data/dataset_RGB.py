@@ -102,8 +102,8 @@ class DataReader(Dataset):
 
         tar_path, transformed = self.load(index_)
 
-        inp_img = F.to_tensor(transformed['image'])
-        tar_img = F.to_tensor(transformed['target'])
+        inp_img = transformed['image']
+        tar_img = transformed['target']
 
         if self.mode == 'train':
             inp_img = self.degrade(image=inp_img)['image']
@@ -112,6 +112,9 @@ class DataReader(Dataset):
                     inp_img, tar_img = self.mixup(inp_img, tar_img, mode='mixup')
                 else:
                     inp_img, tar_img = self.mixup(inp_img, tar_img, mode='cutmix')
+
+        inp_img = F.to_tensor(inp_img)
+        tar_img = F.to_tensor(tar_img)
 
         filename = os.path.basename(tar_path)
 
