@@ -138,7 +138,7 @@ class NextAttentionImplZ(nn.Module):
         return res
 
 
-## Axis-based Multi-head Self-Attention (row and col attention)
+# Axis-based Multi-head Self-Attention (row and col attention)
 class NextAttentionZ(nn.Module):
     def __init__(self, num_dims, num_heads=1, bias=True) -> None:
         super().__init__()
@@ -160,7 +160,7 @@ class NextAttentionZ(nn.Module):
         return x
 
 
-### Dual Gated Feed-Forward Networ
+## Dual Gated Feed-Forward Networ
 class FeedForward(nn.Module):
     def __init__(self, dim, ffn_expansion_factor, bias):
         super(FeedForward, self).__init__()
@@ -244,14 +244,18 @@ class MaskFormer(nn.Module):
         inter_class_variances = (total_mean * cdf - cumulative_means) ** 2 / (cdf * (1.0 - cdf) + 1e-12)
         otsu_threshold = torch.argmax(inter_class_variances) / 255
 
-        mask = torch.ones_like(bin_x, device=bin_x.device)
-        # B x 1 x H x W
-        mask[bin_x > otsu_threshold] = 0
+        otsu_mask = torch.ones_like(bin_x, device=bin_x.device)
+        otsu_mask[bin_x > otsu_threshold] = 0
 
-        # B x 1 x H x W
-        mask = self.model(mask)
+        trans_mask = torch.sigmoid(self.model(otsu_mask))
+        trans_threshold = F.avg_pool2d(trans_mask, kernel_size=trans_mask.shape[2:]).item()
 
-        return mask
+        trans_mask = torch.ones_like(bin_x, device=bin_x.device)
+        trans_mask[bin_x > trans_threshold] = 0
+
+        res_mask = torch.clamp(otsu_mask + trans_mask, min=0, max=1)
+
+        return res_mask
 
 
 class ConvLayer(nn.Module):
@@ -472,7 +476,7 @@ class NAFBlock(nn.Module):
         return y + x * self.gamma
 
 
-## Cross-layer Attention Fusion Block
+# Cross-layer Attention Fusion Block
 class LAM_Module_v2(nn.Module):
     """ Layer attention module"""
 
@@ -681,7 +685,7 @@ class Refine(nn.Module):
         out_fusion_123 = self.layer_fussion_2(inp_fusion)
         out = self.conv_fuss_2(out_fusion_123)
 
-        out = torch.clamp(self.output(out), min=0, max=1)
+        out = torch.sigmoid(self.output(out))
 
         return out
 
@@ -701,7 +705,7 @@ class Model(nn.Module):
 
         x_res = self.refine(x_res)
 
-        res = torch.clamp((x_res * mask + x * (1 - mask)), min=0, max=1)
+        res = x_res * mask + x * (1 - mask)
 
         return res
 
@@ -712,6 +716,5 @@ if __name__ == '__main__':
     img = TF.to_tensor(img).cuda()
     img = TF.resize(img, (512, 512)).unsqueeze(0)
     g_img = TF.rgb_to_grayscale(img)
-    out = model(img, g_img)
-
+    out = model(g_img, img)
     print(out.shape)

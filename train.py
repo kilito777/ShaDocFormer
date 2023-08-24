@@ -117,7 +117,7 @@ def train():
             if psnr > best_psnr:
                 # save model
                 best_epoch = epoch
-                best_psnr = lpips
+                best_psnr = psnr
                 save_checkpoint({
                     'state_dict': model.state_dict(),
                 }, epoch, opt.MODEL.SESSION, opt.TRAINING.SAVE_DIR)
