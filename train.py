@@ -1,7 +1,7 @@
 import warnings
 
 import torch.optim as optim
-from accelerate import Accelerator
+from accelerate import Accelerator, DistributedDataParallelKwargs
 from torch.utils.data import DataLoader
 from torchmetrics.functional import peak_signal_noise_ratio, structural_similarity_index_measure
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
@@ -20,7 +20,7 @@ def train():
     opt = Config('config.yml')
     seed_everything(opt.OPTIM.SEED)
 
-    accelerator = Accelerator(log_with='wandb') if opt.OPTIM.WANDB else Accelerator()
+    accelerator = Accelerator(log_with='wandb') if opt.OPTIM.WANDB else Accelerator(kwargs_handlers=[DistributedDataParallelKwargs(find_unused_parameters=True)])
     if accelerator.is_local_main_process:
         os.makedirs(opt.TRAINING.SAVE_DIR, exist_ok=True)
     device = accelerator.device
