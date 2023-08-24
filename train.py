@@ -3,7 +3,6 @@ import warnings
 import torch.optim as optim
 from accelerate import Accelerator
 from pytorch_msssim import SSIM
-import lpips
 from torch.utils.data import DataLoader
 from torchmetrics.functional import peak_signal_noise_ratio, structural_similarity_index_measure
 from tqdm import tqdm
@@ -13,14 +12,14 @@ from data import get_data
 from models import *
 from utils import *
 
+
 warnings.filterwarnings('ignore')
 
 opt = Config('config.yml')
 
 seed_everything(opt.OPTIM.SEED)
 
-if not os.path.exists(opt.TRAINING.SAVE_DIR):
-    os.makedirs(opt.TRAINING.SAVE_DIR)
+os.makedirs(opt.TRAINING.SAVE_DIR, exist_ok=True)
 
 
 def train():
@@ -48,6 +47,7 @@ def train():
     # Model & Loss
     model = Model()
     criterion_ssim = SSIM(data_range=1, size_average=True, channel=3).to(device)
+    import lpips
     criterion_lpips = lpips.LPIPS(net='alex').to(device)
     criterion_psnr = torch.nn.SmoothL1Loss()
 
