@@ -19,7 +19,6 @@ opt = Config('config.yml')
 
 seed_everything(opt.OPTIM.SEED)
 
-
 if not os.path.exists(opt.TRAINING.SAVE_DIR):
     os.makedirs(opt.TRAINING.SAVE_DIR)
 
@@ -37,10 +36,12 @@ def train():
     train_dir = opt.TRAINING.TRAIN_DIR
     val_dir = opt.TRAINING.VAL_DIR
 
-    train_dataset = get_data(train_dir, opt.MODEL.INPUT, opt.MODEL.TARGET, 'train', {'w': opt.TRAINING.PS_W, 'h': opt.TRAINING.PS_H})
+    train_dataset = get_data(train_dir, opt.MODEL.INPUT, opt.MODEL.TARGET, 'train', opt.TRAINING.ORI,
+                             {'w': opt.TRAINING.PS_W, 'h': opt.TRAINING.PS_H})
     trainloader = DataLoader(dataset=train_dataset, batch_size=opt.OPTIM.BATCH_SIZE, shuffle=True, num_workers=16,
                              drop_last=False, pin_memory=True)
-    val_dataset = get_data(val_dir, opt.MODEL.INPUT, opt.MODEL.TARGET, 'eval', {'w': opt.TRAINING.PS_W, 'h': opt.TRAINING.PS_H})
+    val_dataset = get_data(val_dir, opt.MODEL.INPUT, opt.MODEL.TARGET, 'test', opt.TRAINING.ORI,
+                           {'w': opt.TRAINING.PS_W, 'h': opt.TRAINING.PS_H})
     testloader = DataLoader(dataset=val_dataset, batch_size=1, shuffle=False, num_workers=8, drop_last=False,
                             pin_memory=True)
 
@@ -51,7 +52,8 @@ def train():
     criterion_psnr = torch.nn.SmoothL1Loss()
 
     # Optimizer & Scheduler
-    optimizer_b = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=opt.OPTIM.LR_INITIAL, betas=(0.9, 0.999), eps=1e-8)
+    optimizer_b = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=opt.OPTIM.LR_INITIAL,
+                              betas=(0.9, 0.999), eps=1e-8)
     scheduler_b = optim.lr_scheduler.CosineAnnealingLR(optimizer_b, opt.OPTIM.NUM_EPOCHS, eta_min=opt.OPTIM.LR_MIN)
 
     trainloader, testloader = accelerator.prepare(trainloader, testloader)

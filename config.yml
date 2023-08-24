@@ -22,6 +22,7 @@ TRAINING:
   TRAIN_DIR: '../dataset/RDD/train/' # path to training data
   VAL_DIR: '../dataset/RDD/test/'     # path to validation data
   SAVE_DIR: './checkpoints/'          # path to save models and images
+  ORI: False
 
 TESTING:
   WEIGHT: './checkpoints/best.pth'

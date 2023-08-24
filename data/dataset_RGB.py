@@ -13,7 +13,7 @@ def is_image_file(filename):
 
 
 class DataReader(Dataset):
-    def __init__(self, img_dir, inp='input', tar='target', mode='train', img_options=None):
+    def __init__(self, img_dir, inp='input', tar='target', mode='train', ori=False, img_options=None):
         super(DataReader, self).__init__()
 
         inp_files = sorted(os.listdir(os.path.join(img_dir, inp)))
@@ -43,21 +43,23 @@ class DataReader(Dataset):
                 # A.RandomShadow(p=0.5)
                 A.RandomShadow(shadow_roi=(0, 0, 1, 1), num_shadows_upper=10, shadow_dimension=15, p=1)
             ])
-        elif self.mode == 'eval':
-            self.transform = A.Compose([
-                A.Resize(height=img_options['h'], width=img_options['w']),
-            ],
-                additional_targets={
-                    'target': 'image',
-                }
-            )
-        elif self.mode == 'test':
-            self.transform = A.Compose([
-            ],
-                additional_targets={
-                    'target': 'image',
-                }
-            )
+        else:
+            if ori:
+                self.transform = A.Compose([
+                    A.NoOp(),
+                ],
+                    additional_targets={
+                        'target': 'image',
+                    }
+                )
+            else:
+                self.transform = A.Compose([
+                    A.Resize(height=img_options['h'], width=img_options['w']),
+                ],
+                    additional_targets={
+                        'target': 'image',
+                    }
+                )
 
     def mixup(self, inp_img, tar_img, mode='mixup'):
         mixup_index_ = random.randint(0, self.sizex - 1)
