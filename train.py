@@ -12,20 +12,19 @@ from data import get_data
 from models import *
 from utils import *
 
-
 warnings.filterwarnings('ignore')
-
-opt = Config('config.yml')
-
-seed_everything(opt.OPTIM.SEED)
-
-os.makedirs(opt.TRAINING.SAVE_DIR, exist_ok=True)
 
 
 def train():
     # Accelerate
+    opt = Config('config.yml')
+    seed_everything(opt.OPTIM.SEED)
+
     accelerator = Accelerator(log_with='wandb') if opt.OPTIM.WANDB else Accelerator()
+    if accelerator.is_local_main_process:
+        os.makedirs(opt.TRAINING.SAVE_DIR, exist_ok=True)
     device = accelerator.device
+
     config = {
         "dataset": opt.TRAINING.TRAIN_DIR
     }
@@ -107,9 +106,9 @@ def train():
 
                 res, tar = accelerator.gather((res, tar))
 
-                psnr += peak_signal_noise_ratio(res, tar, data_range=1)
-                ssim += structural_similarity_index_measure(res, tar, data_range=1)
-                lpips += criterion_lpips(res, tar)
+                psnr += peak_signal_noise_ratio(res, tar, data_range=1).item()
+                ssim += structural_similarity_index_measure(res, tar, data_range=1).item()
+                lpips += criterion_lpips(res, tar).item()
 
             psnr /= size
             ssim /= size
@@ -129,9 +128,10 @@ def train():
                 "LPIPS": lpips
             }, step=epoch)
 
-            print(
-                "epoch: {}, PSNR: {}, SSIM: {}, LPIPS: {}, best PSNR: {}, best epoch: {}"
-                .format(epoch, psnr, ssim, lpips, best_psnr, best_epoch))
+            if accelerator.is_local_main_process:
+                print(
+                    "epoch: {}, PSNR: {}, SSIM: {}, LPIPS: {}, best PSNR: {}, best epoch: {}"
+                    .format(epoch, psnr, ssim, lpips, best_psnr, best_epoch))
 
     accelerator.end_training()
 

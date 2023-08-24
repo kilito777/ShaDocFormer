@@ -30,10 +30,10 @@ class DataReader(Dataset):
 
         if self.mode == 'train':
             self.transform = A.Compose([
-                A.RandomResizedCrop(height=img_options['h'], width=img_options['w']),
                 A.Flip(p=0.3),
                 A.RandomRotate90(p=0.3),
-                A.Rotate(p=0.3)
+                A.Rotate(p=0.3),
+                A.RandomResizedCrop(height=img_options['h'], width=img_options['w']),
             ],
                 additional_targets={
                     'target': 'image',
@@ -60,6 +60,9 @@ class DataReader(Dataset):
                         'target': 'image',
                     }
                 )
+            self.degrade = A.Compose([
+                A.NoOp(),
+            ])
 
     def mixup(self, inp_img, tar_img, mode='mixup'):
         mixup_index_ = random.randint(0, self.sizex - 1)
@@ -69,7 +72,7 @@ class DataReader(Dataset):
         alpha = 0.2
         lam = np.random.beta(alpha, alpha)
 
-        mixup_inp_img = F.to_tensor(transformed['image'])
+        mixup_inp_img = F.to_tensor(self.degrade(image=transformed['image'])['image'])
         mixup_tar_img = F.to_tensor(transformed['target'])
 
         if mode == 'mixup':
@@ -92,6 +95,7 @@ class DataReader(Dataset):
             inp_img[:, y0:y1, x0:x1] = mixup_inp_img[:, y0:y1, x0:x1]
             tar_img[:, y0:y1, x0:x1] = mixup_tar_img[:, y0:y1, x0:x1]
 
+
         return inp_img, tar_img
 
     def __len__(self):
@@ -102,19 +106,15 @@ class DataReader(Dataset):
 
         tar_path, transformed = self.load(index_)
 
-        inp_img = transformed['image']
-        tar_img = transformed['target']
+        inp_img = F.to_tensor(self.degrade(image=transformed['image'])['image'])
+        tar_img = F.to_tensor(transformed['target'])
 
         if self.mode == 'train':
-            inp_img = self.degrade(image=inp_img)['image']
             if index_ > 0 and index_ % 3 == 0:
                 if random.random() > 0.5:
                     inp_img, tar_img = self.mixup(inp_img, tar_img, mode='mixup')
                 else:
                     inp_img, tar_img = self.mixup(inp_img, tar_img, mode='cutmix')
-
-        inp_img = F.to_tensor(inp_img)
-        tar_img = F.to_tensor(tar_img)
 
         filename = os.path.basename(tar_path)
 
