@@ -160,7 +160,7 @@ class NextAttentionZ(nn.Module):
         return x
 
 
-## Dual Gated Feed-Forward Networ
+# Dual Gated Feed-Forward Networ
 class FeedForward(nn.Module):
     def __init__(self, dim, ffn_expansion_factor, bias):
         super(FeedForward, self).__init__()
@@ -211,9 +211,9 @@ class ResidualBlock(nn.Module):
         return self.block(x)
 
 
-class MaskFormer(nn.Module):
+class ThresholdFormer(nn.Module):
     def __init__(self, num_trans_blocks):
-        super(MaskFormer, self).__init__()
+        super(ThresholdFormer, self).__init__()
 
         model = [nn.Conv2d(1, 4, 3, padding=1),
                  nn.InstanceNorm2d(4),
@@ -525,9 +525,9 @@ class LAM_Module_v2(nn.Module):
         return out
 
 
-class Refine(nn.Module):
+class Refiner(nn.Module):
     def __init__(self):
-        super(Refine, self).__init__()
+        super(Refiner, self).__init__()
 
         dim = 16
         self.patch_embed = OverlapPatchEmbed(3, dim)
@@ -664,9 +664,9 @@ class Model(nn.Module):
     def __init__(self):
         super(Model, self).__init__()
 
-        self.mask = MaskFormer(num_trans_blocks=3)
+        self.mask = ThresholdFormer(num_trans_blocks=3)
 
-        self.refine = Refine()
+        self.refine = Refiner()
 
     def forward(self, bin_x, x):
         mask = self.mask(bin_x)
