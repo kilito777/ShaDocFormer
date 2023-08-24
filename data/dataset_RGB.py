@@ -106,7 +106,7 @@ class DataReader(Dataset):
         tar_img = F.to_tensor(transformed['target'])
 
         if self.mode == 'train':
-            inp_img = self.degrade(inp_img)['image']
+            inp_img = self.degrade(image=inp_img)['image']
             if index_ > 0 and index_ % 3 == 0:
                 if random.random() > 0.5:
                     inp_img, tar_img = self.mixup(inp_img, tar_img, mode='mixup')
