@@ -4,7 +4,7 @@ import torch.optim as optim
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
 from torchmetrics.functional import peak_signal_noise_ratio, structural_similarity_index_measure
-from torchmetrics.functional.image.lpips import learned_perceptual_image_patch_similarity
+from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 from tqdm import tqdm
 
 from config import Config
@@ -46,6 +46,7 @@ def train():
     # Model & Loss
     model = Model()
     criterion_psnr = torch.nn.SmoothL1Loss()
+    criterion_lpips = LearnedPerceptualImagePatchSimilarity(net_type='alex', normalize=True).to(device)
 
     # Optimizer & Scheduler
     optimizer_b = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=opt.OPTIM.LR_INITIAL,
@@ -77,7 +78,7 @@ def train():
 
             loss_psnr = criterion_psnr(res, tar)
             loss_ssim = 1 - structural_similarity_index_measure(res, tar, data_range=1)
-            loss_lpips = learned_perceptual_image_patch_similarity(res, tar, net_type='alex')
+            loss_lpips = criterion_lpips(res, tar)
 
             train_loss = loss_psnr + 0.3 * loss_ssim + 0.7 * loss_lpips
 
@@ -105,7 +106,7 @@ def train():
 
                 psnr += peak_signal_noise_ratio(res, tar, data_range=1).item()
                 ssim += structural_similarity_index_measure(res, tar, data_range=1).item()
-                lpips += learned_perceptual_image_patch_similarity(res, tar, net_type='alex').item()
+                lpips += criterion_lpips(res, tar).item()
 
             psnr /= size
             ssim /= size

@@ -3,7 +3,7 @@ import warnings
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
 from torchmetrics.functional import peak_signal_noise_ratio, structural_similarity_index_measure
-from torchmetrics.functional.image.lpips import learned_perceptual_image_patch_similarity
+from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 from torchvision.utils import save_image
 from tqdm import tqdm
 
@@ -23,6 +23,8 @@ def test():
 
     accelerator = Accelerator()
     device = accelerator.device
+
+    criterion_lpips = LearnedPerceptualImagePatchSimilarity(net_type='alex', normalize=True).to(device)
 
     # Data Loader
     val_dir = opt.TRAINING.VAL_DIR
@@ -57,7 +59,7 @@ def test():
 
         stat_psnr += peak_signal_noise_ratio(res, tar, data_range=1).item()
         stat_ssim += structural_similarity_index_measure(res, tar, data_range=1).item()
-        stat_lpips += learned_perceptual_image_patch_similarity(res, tar, net_type='alex').item()
+        stat_lpips += criterion_lpips(res, tar).item()
 
     stat_psnr /= size
     stat_ssim /= size
