@@ -2,9 +2,9 @@ import warnings
 
 import torch.optim as optim
 from accelerate import Accelerator
-from pytorch_msssim import SSIM
 from torch.utils.data import DataLoader
 from torchmetrics.functional import peak_signal_noise_ratio, structural_similarity_index_measure
+from torchmetrics.functional.image.lpips import learned_perceptual_image_patch_similarity
 from tqdm import tqdm
 
 from config import Config
@@ -45,9 +45,6 @@ def train():
 
     # Model & Loss
     model = Model()
-    criterion_ssim = SSIM(data_range=1, size_average=True, channel=3).to(device)
-    import lpips
-    criterion_lpips = lpips.LPIPS(net='alex').to(device)
     criterion_psnr = torch.nn.SmoothL1Loss()
 
     # Optimizer & Scheduler
@@ -79,8 +76,8 @@ def train():
             res = model(inp)
 
             loss_psnr = criterion_psnr(res, tar)
-            loss_ssim = 1 - criterion_ssim(res, tar)
-            loss_lpips = criterion_lpips(res, tar)
+            loss_ssim = 1 - structural_similarity_index_measure(res, tar, data_range=1)
+            loss_lpips = learned_perceptual_image_patch_similarity(res, tar, net_type='alex')
 
             train_loss = loss_psnr + 0.3 * loss_ssim + 0.7 * loss_lpips
 
@@ -108,7 +105,7 @@ def train():
 
                 psnr += peak_signal_noise_ratio(res, tar, data_range=1).item()
                 ssim += structural_similarity_index_measure(res, tar, data_range=1).item()
-                lpips += criterion_lpips(res, tar).item()
+                lpips += learned_perceptual_image_patch_similarity(res, tar, net_type='alex').item()
 
             psnr /= size
             ssim /= size
