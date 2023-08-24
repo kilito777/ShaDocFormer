@@ -70,11 +70,12 @@ def train():
         for _, data in enumerate(tqdm(trainloader, disable=not accelerator.is_local_main_process)):
             # get the inputs; data is a list of [target, input, filename]
             inp = data[0].contiguous()
-            tar = data[1]
+            gray = data[1].contiguous()
+            tar = data[2]
 
             # forward
             optimizer_b.zero_grad()
-            res = model(inp)
+            res = model(gray, inp)
 
             loss_psnr = criterion_psnr(res, tar)
             loss_ssim = 1 - structural_similarity_index_measure(res, tar, data_range=1)
@@ -94,13 +95,14 @@ def train():
             psnr = 0
             ssim = 0
             lpips = 0
-            for _, test_data in enumerate(tqdm(testloader, disable=not accelerator.is_local_main_process)):
+            for _, data in enumerate(tqdm(testloader, disable=not accelerator.is_local_main_process)):
                 # get the inputs; data is a list of [targets, inputs, filename]
-                inp = test_data[0].contiguous()
-                tar = test_data[1]
+                inp = data[0].contiguous()
+                gray = data[1].contiguous()
+                tar = data[2]
 
                 with torch.no_grad():
-                    res = model(inp)
+                    res = model(gray, inp)
 
                 res, tar = accelerator.gather((res, tar))
 

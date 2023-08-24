@@ -95,7 +95,6 @@ class DataReader(Dataset):
             inp_img[:, y0:y1, x0:x1] = mixup_inp_img[:, y0:y1, x0:x1]
             tar_img[:, y0:y1, x0:x1] = mixup_tar_img[:, y0:y1, x0:x1]
 
-
         return inp_img, tar_img
 
     def __len__(self):
@@ -116,9 +115,11 @@ class DataReader(Dataset):
                 else:
                     inp_img, tar_img = self.mixup(inp_img, tar_img, mode='cutmix')
 
+        bin_img = F.rgb_to_grayscale(inp_img)
+
         filename = os.path.basename(tar_path)
 
-        return inp_img, tar_img, filename
+        return inp_img, bin_img, tar_img, filename
 
     def load(self, index_):
         inp_path = self.inp_filenames[index_]

@@ -50,12 +50,13 @@ def test():
     for _, test_data in enumerate(tqdm(testloader)):
         # get the inputs; data is a list of [targets, inputs, filename]
         inp = test_data[0].contiguous()
-        tar = test_data[1]
+        gray = test_data[1].contiguous()
+        tar = test_data[2]
 
         with torch.no_grad():
-            res = model(inp)
+            res = model(gray, inp)
 
-        save_image(res, os.path.join("result", test_data[2][0]))
+        save_image(res, os.path.join("result", test_data[3][0]))
 
         stat_psnr += peak_signal_noise_ratio(res, tar, data_range=1).item()
         stat_ssim += structural_similarity_index_measure(res, tar, data_range=1).item()

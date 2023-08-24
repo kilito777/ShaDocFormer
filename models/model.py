@@ -686,27 +686,28 @@ class Refine(nn.Module):
         return out
 
 
-class ShaDocFormer(nn.Module):
+class Model(nn.Module):
     def __init__(self):
-        super(ShaDocFormer, self).__init__()
+        super(Model, self).__init__()
 
         self.mask = MaskFormer(num_residual_blocks=3)
 
         self.refine = Refine()
 
-    def forward(self, x, bin_x):
+    def forward(self, bin_x, x):
         mask = self.mask(bin_x)
 
         x_res = mask * x
 
         x_res = self.refine(x_res)
 
-        res = x_res * mask + x * (1 - mask)
+        res = torch.clamp((x_res * mask + x * (1 - mask)), min=0, max=1)
+
         return res
 
 
 if __name__ == '__main__':
-    model = ShaDocFormer().cuda()
+    model = Model().cuda()
     img = Image.open('test.jpg').convert('RGB')
     img = TF.to_tensor(img).cuda()
     img = TF.resize(img, (512, 512)).unsqueeze(0)
