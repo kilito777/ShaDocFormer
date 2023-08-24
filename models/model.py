@@ -212,22 +212,22 @@ class ResidualBlock(nn.Module):
 
 
 class MaskFormer(nn.Module):
-    def __init__(self, num_residual_blocks):
+    def __init__(self, num_trans_blocks):
         super(MaskFormer, self).__init__()
 
-        model = [nn.Conv2d(1, 16, 3, padding=1),
+        model = [nn.Conv2d(1, 4, 3, padding=1),
                  nn.InstanceNorm2d(4),
                  nn.LeakyReLU(),
-                 nn.Conv2d(16, 64, 3, padding=1),
+                 nn.Conv2d(4, 16, 3, padding=1),
                  nn.LeakyReLU()]
 
-        for _ in range(num_residual_blocks):
-            # model += [ResidualBlock(8)]
-            model += [TransformerBlock(dim=64)]
+        for _ in range(num_trans_blocks):
+            model += [
+                TransformerBlock(dim=16, num_heads=1, ffn_expansion_factor=2.66, bias=False, LayerNorm_type='WithBias')]
 
-        model += [nn.Conv2d(64, 16, 3, padding=1),
+        model += [nn.Conv2d(16, 4, 3, padding=1),
                   nn.LeakyReLU(),
-                  nn.Conv2d(16, 1, 3, padding=1)]
+                  nn.Conv2d(4, 1, 3, padding=1)]
 
         self.model = nn.Sequential(*model)
 
@@ -536,49 +536,42 @@ class Refine(nn.Module):
         self.down_2 = Downsample(dim * 2)
         self.down_3 = Downsample(dim * 2 * 2)
 
-        self.encoder_1 = nn.Sequential(
-            *[TransformerBlock(dim=dim, num_heads=1, ffn_expansion_factor=2.66, bias=False, LayerNorm_type='WithBias')
-              for _ in range(1)])
-
-        self.encoder_2 = nn.Sequential(
-            *[TransformerBlock(dim=dim, num_heads=1, ffn_expansion_factor=2.66, bias=False, LayerNorm_type='WithBias')
-              for _ in range(1)])
-
-        self.encoder_3 = nn.Sequential(
-            *[TransformerBlock(dim=dim, num_heads=1, ffn_expansion_factor=2.66, bias=False, LayerNorm_type='WithBias')
-              for _ in range(1)])
-
-        self.layer_fussion = LAM_Module_v2(in_dim=int(dim * 3))
-
-        self.conv_fuss = nn.Conv2d(int(dim * 3), int(dim), kernel_size=1, bias=False)
-
-        self.block_down_1_1 = NAFBlock(c=dim * 2)
-        self.block_down_1_2 = ConvLayer(in_channels=dim * 2, out_channels=dim * 2, kernel_size=3, stride=1, dilation=2,
+        self.block_down_1_1 = ConvLayer(in_channels=dim * 2, out_channels=dim * 2, kernel_size=3, stride=1, dilation=8,
+                                        norm=None, nonlinear='leakyrelu')
+        self.block_down_1_2 = ConvLayer(in_channels=dim * 2, out_channels=dim * 2, kernel_size=3, stride=1, dilation=8,
                                         norm=None, nonlinear='leakyrelu')
         self.aggreation_down_1 = Aggreation(in_channels=dim * 2 * 3, out_channels=dim * 2)
 
-        self.block_down_2_1 = NAFBlock(c=dim * 2 * 2)
+        self.block_down_2_1 = ConvLayer(in_channels=dim * 2 * 2, out_channels=dim * 2 * 2, kernel_size=3, stride=1,
+                                        dilation=4,
+                                        norm=None, nonlinear='leakyrelu')
         self.block_down_2_2 = ConvLayer(in_channels=dim * 2 * 2, out_channels=dim * 2 * 2, kernel_size=3, stride=1,
                                         dilation=4,
                                         norm=None, nonlinear='leakyrelu')
         self.aggreation_down_2 = Aggreation(in_channels=dim * 2 * 2 * 3, out_channels=dim * 2 * 2)
 
-        self.block_down_3_1 = NAFBlock(c=dim * 2 * 4)
+        self.block_down_3_1 = ConvLayer(in_channels=dim * 2 * 4, out_channels=dim * 2 * 4, kernel_size=3, stride=1,
+                                        dilation=2,
+                                        norm=None, nonlinear='leakyrelu')
         self.block_down_3_2 = ConvLayer(in_channels=dim * 2 * 4, out_channels=dim * 2 * 4, kernel_size=3, stride=1,
-                                        dilation=8,
+                                        dilation=2,
                                         norm=None, nonlinear='leakyrelu')
         self.aggreation_down_3 = Aggreation(in_channels=dim * 2 * 4 * 3, out_channels=dim * 2 * 4)
 
-        self.spp_img = SPP(in_channels=dim * 2 * 4, out_channels=dim * 2 * 4, num_layers=4,
-                           interpolation_type='bicubic')
+        # self.middle = SPP(in_channels=dim * 2 * 4, out_channels=dim * 2 * 4, num_layers=4, interpolation_type='bicubic')
 
-        self.block_up_2_1 = NAFBlock(c=dim * 2 * 2)
+        self.middle = nn.Sequential(*[NAFBlock(c=dim * 2 * 4) for _ in range(3)])
+
+        self.block_up_2_1 = ConvLayer(in_channels=dim * 2 * 2, out_channels=dim * 2 * 2, kernel_size=3, stride=1,
+                                      dilation=2,
+                                      norm=None, nonlinear='leakyrelu')
         self.block_up_2_2 = ConvLayer(in_channels=dim * 2 * 2, out_channels=dim * 2 * 2, kernel_size=3, stride=1,
-                                      dilation=8,
+                                      dilation=2,
                                       norm=None, nonlinear='leakyrelu')
         self.aggreation_up_2 = Aggreation(in_channels=dim * 2 * 2 * 3, out_channels=dim * 2 * 2)
 
-        self.block_up_1_1 = NAFBlock(c=dim * 2)
+        self.block_up_1_1 = ConvLayer(in_channels=dim * 2, out_channels=dim * 2, kernel_size=3, stride=1, dilation=4,
+                                      norm=None, nonlinear='leakyrelu')
         self.block_up_1_2 = ConvLayer(in_channels=dim * 2, out_channels=dim * 2, kernel_size=3, stride=1, dilation=4,
                                       norm=None, nonlinear='leakyrelu')
         self.aggreation_up_1 = Aggreation(in_channels=dim * 2 * 3, out_channels=dim * 2)
@@ -587,9 +580,10 @@ class Refine(nn.Module):
         self.coefficient_2_1 = nn.Parameter(torch.ones((2, dim * 2)), requires_grad=True)
         self.coefficient_1_0 = nn.Parameter(torch.ones((2, dim)), requires_grad=True)
 
-        self.latent = nn.Sequential(
-            *[TransformerBlock(dim=dim, num_heads=1, ffn_expansion_factor=2.66, bias=False, LayerNorm_type='WithBias')
-              for _ in range(1)])
+        # self.latent = nn.Sequential(
+        #     *[TransformerBlock(dim=dim, num_heads=1, ffn_expansion_factor=2.66, bias=False, LayerNorm_type='WithBias')
+        #       for _ in range(1)])
+        self.latent = SPP(in_channels=dim, out_channels=dim, num_layers=4, interpolation_type='bicubic')
 
         self.skip_3_2 = nn.Conv2d(dim * 2 * 2, dim * 2 * 2, kernel_size=1, bias=False)
         self.skip_2_1 = nn.Conv2d(dim * 2, dim * 2, kernel_size=1, bias=False)
@@ -598,34 +592,16 @@ class Refine(nn.Module):
         self.up_2 = Upsample(int(dim * 2 * 2))
         self.up_1 = Upsample(int(dim * 2))
 
-        self.refinement_1 = nn.Sequential(
+        self.refinement = nn.Sequential(
             *[TransformerBlock(dim=dim, num_heads=1, ffn_expansion_factor=2.66, bias=False, LayerNorm_type='WithBias')
               for _ in range(1)])
-        self.refinement_2 = nn.Sequential(
-            *[TransformerBlock(dim=dim, num_heads=1, ffn_expansion_factor=2.66, bias=False, LayerNorm_type='WithBias')
-              for _ in range(1)])
-        self.refinement_3 = nn.Sequential(
-            *[TransformerBlock(dim=dim, num_heads=1, ffn_expansion_factor=2.66, bias=False, LayerNorm_type='WithBias')
-              for _ in range(1)])
-
-        self.layer_fussion_2 = LAM_Module_v2(in_dim=dim * 3)
-        self.conv_fuss_2 = nn.Conv2d(int(dim * 3), dim, kernel_size=1, bias=False)
 
         self.output = nn.Conv2d(dim, 3, kernel_size=3, stride=1, padding=1, bias=False)
 
     def forward(self, x):
         inp_enc = self.patch_embed(x)
 
-        out_enc_1 = self.encoder_1(inp_enc)
-        out_enc_2 = self.encoder_2(out_enc_1)
-        out_enc_3 = self.encoder_3(out_enc_2)
-
-        inp_fusion = torch.cat([out_enc_1.unsqueeze(1), out_enc_2.unsqueeze(1), out_enc_3.unsqueeze(1)], dim=1)
-
-        out_fusion = self.layer_fussion(inp_fusion)
-        out_fusion = self.conv_fuss(out_fusion)
-
-        inp_enc_level1_0 = self.down_1(out_fusion)
+        inp_enc_level1_0 = self.down_1(inp_enc)
 
         out_enc_level1_0 = self.block_down_1_1(inp_enc_level1_0)
         out_enc_level1_1 = self.block_down_1_2(out_enc_level1_0)
@@ -646,7 +622,7 @@ class Refine(nn.Module):
         out_agg_down_3 = self.aggreation_down_3(
             torch.cat((inp_enc_level3_0, out_enc_level3_0, out_enc_level3_1), dim=1))
 
-        out_agg_down_3 = self.spp_img(out_agg_down_3)
+        out_agg_down_3 = self.middle(out_agg_down_3)
 
         inp_enc_level3_1 = self.up_3(out_agg_down_3)
 
@@ -672,18 +648,12 @@ class Refine(nn.Module):
 
         out_enc_level1_1 = self.up_1(out_agg_up_1)
 
-        out_fusion = self.latent(out_fusion)
+        out_fusion = self.latent(inp_enc)
 
         out = self.coefficient_1_0[0, :][None, :, None, None] * out_fusion + self.coefficient_1_0[1, :][None, :, None,
                                                                              None] * out_enc_level1_1
 
-        out_1 = self.refinement_1(out)
-        out_2 = self.refinement_2(out_1)
-        out_3 = self.refinement_3(out_2)
-
-        inp_fusion = torch.cat([out_1.unsqueeze(1), out_2.unsqueeze(1), out_3.unsqueeze(1)], dim=1)
-        out_fusion_123 = self.layer_fussion_2(inp_fusion)
-        out = self.conv_fuss_2(out_fusion_123)
+        out = self.refinement(out)
 
         out = torch.sigmoid(self.output(out))
 
@@ -694,7 +664,7 @@ class Model(nn.Module):
     def __init__(self):
         super(Model, self).__init__()
 
-        self.mask = MaskFormer(num_residual_blocks=3)
+        self.mask = MaskFormer(num_trans_blocks=3)
 
         self.refine = Refine()
 
