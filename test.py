@@ -2,8 +2,9 @@ import warnings
 
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
-from torchmetrics.functional import peak_signal_noise_ratio, mean_squared_error, structural_similarity_index_measure
+from torchmetrics.functional import peak_signal_noise_ratio, structural_similarity_index_measure
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
+from torchmetrics.functional.regression import mean_squared_error
 from torchvision.utils import save_image
 from tqdm import tqdm
 
