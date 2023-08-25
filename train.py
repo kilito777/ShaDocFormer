@@ -3,7 +3,7 @@ import warnings
 import torch.optim as optim
 from accelerate import Accelerator, DistributedDataParallelKwargs
 from torch.utils.data import DataLoader
-from torchmetrics.functional import peak_signal_noise_ratio, structural_similarity_index_measure
+from torchmetrics.functional import peak_signal_noise_ratio, mean_squared_error, structural_similarity_index_measure
 from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 from tqdm import tqdm
 
@@ -20,7 +20,7 @@ def train():
     opt = Config('config.yml')
     seed_everything(opt.OPTIM.SEED)
 
-    accelerator = Accelerator(log_with='wandb') if opt.OPTIM.WANDB else Accelerator(kwargs_handlers=[DistributedDataParallelKwargs(find_unused_parameters=True)])
+    accelerator = Accelerator(log_with='wandb') if opt.OPTIM.WANDB else Accelerator()
     if accelerator.is_local_main_process:
         os.makedirs(opt.TRAINING.SAVE_DIR, exist_ok=True)
     device = accelerator.device
@@ -58,7 +58,7 @@ def train():
 
     start_epoch = 1
     best_epoch = 1
-    best_psnr = 0
+    best_rmse = 100
 
     size = len(testloader)
 
@@ -94,6 +94,7 @@ def train():
             psnr = 0
             ssim = 0
             lpips = 0
+            rmse = 0
             for _, data in enumerate(tqdm(testloader, disable=not accelerator.is_local_main_process)):
                 # get the inputs; data is a list of [targets, inputs, filename]
                 inp = data[0].contiguous()
@@ -108,15 +109,17 @@ def train():
                 psnr += peak_signal_noise_ratio(res, tar, data_range=1).item()
                 ssim += structural_similarity_index_measure(res, tar, data_range=1).item()
                 lpips += criterion_lpips(res, tar).item()
+                rmse += mean_squared_error(res * 255, tar * 255, squared=False).item()
 
             psnr /= size
             ssim /= size
             lpips /= size
+            rmse /= size
 
-            if psnr > best_psnr:
+            if rmse < best_rmse:
                 # save model
                 best_epoch = epoch
-                best_psnr = psnr
+                best_rmse = rmse
                 save_checkpoint({
                     'state_dict': model.state_dict(),
                 }, epoch, opt.MODEL.SESSION, opt.TRAINING.SAVE_DIR)
@@ -124,13 +127,14 @@ def train():
             accelerator.log({
                 "PSNR": psnr,
                 "SSIM": ssim,
+                "RMSE": rmse,
                 "LPIPS": lpips
             }, step=epoch)
 
             if accelerator.is_local_main_process:
                 print(
-                    "epoch: {}, PSNR: {}, SSIM: {}, LPIPS: {}, best PSNR: {}, best epoch: {}"
-                    .format(epoch, psnr, ssim, lpips, best_psnr, best_epoch))
+                    "epoch: {}, RMSE:{}, PSNR: {}, SSIM: {}, LPIPS: {}, best RMSE: {}, best epoch: {}"
+                    .format(epoch, rmse, psnr, ssim, lpips, best_rmse, best_epoch))
 
     accelerator.end_training()
 
