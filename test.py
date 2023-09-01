@@ -1,5 +1,7 @@
 import warnings
 
+warnings.filterwarnings('ignore')
+
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
 from torchmetrics.functional import peak_signal_noise_ratio, structural_similarity_index_measure
@@ -12,10 +14,6 @@ from config import Config
 from data import get_data
 from models import *
 from utils import *
-
-warnings.filterwarnings('ignore')
-
-
 
 
 def test():
@@ -63,7 +61,8 @@ def test():
         stat_psnr += peak_signal_noise_ratio(res, tar, data_range=1).item()
         stat_ssim += structural_similarity_index_measure(res, tar, data_range=1).item()
         stat_lpips += criterion_lpips(res, tar).item()
-        stat_rmse += mean_squared_error(torch.mul(res, 255).flatten(), torch.mul(tar, 255).flatten(), squared=False).item()
+        stat_rmse += mean_squared_error(torch.mul(res, 255).flatten(), torch.mul(tar, 255).flatten(),
+                                        squared=False).item()
 
     stat_psnr /= size
     stat_ssim /= size

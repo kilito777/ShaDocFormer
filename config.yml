@@ -25,5 +25,5 @@ TRAINING:
   ORI: False
 
 TESTING:
-  WEIGHT: './checkpoints/best.pth'
+  WEIGHT: './checkpoints/RDD_epoch_178.pth'
   SAVE_IMAGES: True

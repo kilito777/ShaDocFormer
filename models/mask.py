@@ -4,7 +4,7 @@ import einops
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from torchvision.utils import save_image
 
 def to_3d(x):
     return einops.rearrange(x, 'b c h w -> b (h w) c')
@@ -194,7 +194,11 @@ class ThresholdFormer(nn.Module):
         otsu_mask = torch.ones_like(bin_x, device=bin_x.device)
         otsu_mask[bin_x > otsu_threshold] = 0
 
-        trans_mask = self.model(otsu_mask)
+        save_image(otsu_mask, 'otsu.jpg')
+
+        trans_mask = torch.sigmoid(self.model(otsu_mask))
+
+        save_image(trans_mask, 'trans.jpg')
 
         res_mask = torch.cat((otsu_mask, trans_mask), dim=1)
         return res_mask
