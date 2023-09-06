@@ -104,8 +104,11 @@ class DataReader(Dataset):
         index_ = index % self.sizex
 
         tar_path, transformed = self.load(index_)
-
-        inp_img = F.to_tensor(self.degrade(image=transformed['image'])['image'])
+        
+        if self.mode == 'train':
+            inp_img = F.to_tensor(self.degrade(image=transformed['image'])['image'])
+        else:
+            inp_img = F.to_tensor(transformed['image'])
         tar_img = F.to_tensor(transformed['target'])
 
         if self.mode == 'train':
