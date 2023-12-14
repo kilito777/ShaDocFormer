@@ -33,6 +33,7 @@ class DataReader(Dataset):
                 A.Flip(p=0.3),
                 A.RandomRotate90(p=0.3),
                 A.Rotate(p=0.3),
+                A.Transpose(p=0.3),
                 A.RandomResizedCrop(height=img_options['h'], width=img_options['w']),
             ],
                 additional_targets={

@@ -4,7 +4,6 @@ import torch.optim as optim
 from accelerate import Accelerator
 from torch.utils.data import DataLoader
 from torchmetrics.functional import peak_signal_noise_ratio, structural_similarity_index_measure
-from torchmetrics.image.lpip import LearnedPerceptualImagePatchSimilarity
 from torchmetrics.functional.regression import mean_squared_error
 from tqdm import tqdm
 
@@ -46,8 +45,7 @@ def train():
 
     # Model & Loss
     model = Model()
-    criterion_psnr = torch.nn.SmoothL1Loss()
-    criterion_lpips = LearnedPerceptualImagePatchSimilarity(net_type='alex', normalize=True).to(device)
+    criterion_psnr = torch.nn.MSELoss()
 
     # Optimizer & Scheduler
     optimizer_b = optim.AdamW(model.parameters(), lr=opt.OPTIM.LR_INITIAL, betas=(0.9, 0.999), eps=1e-8)
@@ -79,9 +77,8 @@ def train():
 
             loss_psnr = criterion_psnr(res, tar)
             loss_ssim = 1 - structural_similarity_index_measure(res, tar, data_range=1)
-            loss_lpips = criterion_lpips(res, tar)
 
-            train_loss = loss_psnr + 0.3 * loss_ssim + 0.7 * loss_lpips
+            train_loss = loss_psnr + 0.2 * loss_ssim
 
             # backward
             accelerator.backward(train_loss)
@@ -94,7 +91,6 @@ def train():
             model.eval()
             psnr = 0
             ssim = 0
-            lpips = 0
             rmse = 0
             for _, data in enumerate(tqdm(testloader, disable=not accelerator.is_local_main_process)):
                 # get the inputs; data is a list of [targets, inputs, filename]
@@ -109,12 +105,10 @@ def train():
 
                 psnr += peak_signal_noise_ratio(res, tar, data_range=1).item()
                 ssim += structural_similarity_index_measure(res, tar, data_range=1).item()
-                lpips += criterion_lpips(res, tar).item()
                 rmse += mean_squared_error(torch.mul(res, 255).flatten(), torch.mul(tar, 255).flatten(), squared=False).item()
 
             psnr /= size
             ssim /= size
-            lpips /= size
             rmse /= size
 
             if rmse < best_rmse:
@@ -129,13 +123,12 @@ def train():
                 "PSNR": psnr,
                 "SSIM": ssim,
                 "RMSE": rmse,
-                "LPIPS": lpips
             }, step=epoch)
 
             if accelerator.is_local_main_process:
                 print(
-                    "epoch: {}, RMSE:{}, PSNR: {}, SSIM: {}, LPIPS: {}, best RMSE: {}, best epoch: {}"
-                    .format(epoch, rmse, psnr, ssim, lpips, best_rmse, best_epoch))
+                    "epoch: {}, RMSE:{}, PSNR: {}, SSIM: {}, best RMSE: {}, best epoch: {}"
+                    .format(epoch, rmse, psnr, ssim, best_rmse, best_epoch))
 
     accelerator.end_training()
 
