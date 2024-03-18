@@ -9,7 +9,7 @@
     Yingtie Lei</a><sup>
   </span>,
   <span class="author-block">
-    Shenghong Luo</a><sup>
+   <a href='https://shenghongluo.github.io/'> Shenghong Luo</a><sup>
   </span>,
   <span class="author-block">
     Ziyang Zhou</a><sup>
