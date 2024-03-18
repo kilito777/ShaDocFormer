@@ -24,5 +24,4 @@
 
 
 <b>University of Macau</b>
-
 <b>Huizhou University</b>
