@@ -24,5 +24,5 @@
 
 
 <b>University of Macau</b>
-</div>
+
 <b>Huizhou University</b>
