@@ -24,4 +24,6 @@
 
 
 <b>University of Macau</b>
-<b>Huizhou University</b>
+
+
+In <b>_International Joint Conference on Neural Networks 2024 (IJCNN 2024)_<b>
