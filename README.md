@@ -32,6 +32,8 @@ In <b>_International Joint Conference on Neural Networks 2024 (IJCNN 2024)_<b>
 [Paper](https://arxiv.org/abs/2309.06670) 
 
 
+<img src="./result/result.png"/>
+
 # 💗 Acknowledgements
 This work was supported in part by the Science and Technology Development Fund, Macau SAR, under Grant 0087/2020/A2 and Grant 0141/2023/RIA2.
 
