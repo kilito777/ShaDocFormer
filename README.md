@@ -40,6 +40,21 @@ In <b>_International Joint Conference on Neural Networks 2024 (IJCNN 2024)_<b>
 git clone https://github.com/CXH-Research/DocShadow-SD7K.git
 cd DocShadow-SD7K
 pip install -r requirements.txt
+```
+
+## Training
+You may <a href="https://cxh-research.github.io/DocShadow-SD7K/">download</a> the dataset first, and then specify TRAIN_DIR, VAL_DIR and SAVE_DIR in the section TRAINING in `config.yml`.
+
+For single GPU training:
+```
+python train.py
+```
+For multiple GPUs training:
+```
+accelerate config
+accelerate launch train.py
+```
+If you have difficulties with the usage of `accelerate`, please refer to <a href="https://github.com/huggingface/accelerate">Accelerate</a>.
 
 # 💗 Acknowledgements
 This work was supported in part by the Science and Technology Development Fund, Macau SAR, under Grant 0087/2020/A2 and Grant 0141/2023/RIA2.
