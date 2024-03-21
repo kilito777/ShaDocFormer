@@ -37,13 +37,13 @@ In <b>_International Joint Conference on Neural Networks 2024 (IJCNN 2024)_<b>
 # ⚙️ Usage
 ## Installation
 ```
-git clone https://github.com/CXH-Research/DocShadow-SD7K.git
-cd DocShadow-SD7K
+git clone https://github.com/kilito777/ShaDocFormer.git
+cd ShaDocFormer
 pip install -r requirements.txt
 ```
 
 ## Training
-You may <a href="https://cxh-research.github.io/DocShadow-SD7K/">download</a> the dataset first, and then specify TRAIN_DIR, VAL_DIR and SAVE_DIR in the section TRAINING in `config.yml`.
+You may download the dataset first, and then specify TRAIN_DIR, VAL_DIR and SAVE_DIR in the section TRAINING in `config.yml`.
 
 For single GPU training:
 ```
